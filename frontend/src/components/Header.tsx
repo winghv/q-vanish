@@ -1,5 +1,6 @@
+import React from 'react';
 import { Bars3Icon, BellIcon, UserCircleIcon } from '@heroicons/react/24/outline';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 interface HeaderProps {
@@ -9,6 +10,13 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    setUserOpen(false);
+    navigate('/login');
+  };
 
   return (
     <header className="sticky top-0 bg-white border-b border-secondary-200 z-30">
@@ -91,6 +99,7 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
                     </Link>
                     <button
                       className="block w-full text-left px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-100 rounded-md"
+                      onClick={handleLogout}
                     >
                       退出登录
                     </button>
@@ -105,4 +114,4 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   );
 };
 
-export default Header; 
+export default Header;
