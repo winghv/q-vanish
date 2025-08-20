@@ -429,4 +429,141 @@ def bulk_create_market_data(db: Session, market_data_list: List[schemas.MarketDa
     result = []
     for data in market_data_list:
         result.append(create_market_data(db, data))
-    return result 
+    return result
+
+# 扩展现有函数以支持新需求
+def get_user_strategies(db: Session, user_id: int, is_active: Optional[bool] = None, skip: int = 0, limit: int = 100):
+    """获取用户的策略"""
+    query = db.query(models.Strategy).filter(models.Strategy.owner_id == user_id)
+    
+    if is_active is not None:
+        query = query.filter(models.Strategy.is_active == is_active)
+    
+    return query.offset(skip).limit(limit).all()
+
+def get_trades_by_strategy(db: Session, strategy_id: int):
+    """获取特定策略的所有交易"""
+    return db.query(models.Trade).filter(models.Trade.strategy_id == strategy_id).all()
+
+def get_user_recent_trades(db: Session, user_id: int, limit: int = 10):
+    """获取用户最近的交易"""
+    return db.query(models.Trade).filter(
+        models.Trade.user_id == user_id
+    ).order_by(desc(models.Trade.created_at)).limit(limit).all()
+
+def get_user_portfolios(db: Session, user_id: int):
+    """获取用户的投资组合"""
+    return db.query(models.Portfolio).filter(models.Portfolio.user_id == user_id).all()
+
+def get_portfolio_assets(db: Session, portfolio_id: int):
+    """获取投资组合的资产"""
+    return db.query(models.PortfolioAsset).filter(models.PortfolioAsset.portfolio_id == portfolio_id).all()
+
+def get_asset_by_symbol(db: Session, portfolio_id: int, symbol: str):
+    """根据股票代码获取资产"""
+    return db.query(models.PortfolioAsset).filter(
+        models.PortfolioAsset.portfolio_id == portfolio_id,
+        models.PortfolioAsset.symbol == symbol
+    ).first()
+
+# API密钥相关CRUD操作
+def get_user_api_keys(db: Session, user_id: int):
+    """获取用户的API密钥列表"""
+    return db.query(models.UserApiKey).filter(models.UserApiKey.user_id == user_id).all()
+
+def get_user_api_key_by_provider(db: Session, user_id: int, provider: str):
+    """根据提供商获取用户的API密钥"""
+    return db.query(models.UserApiKey).filter(
+        models.UserApiKey.user_id == user_id,
+        models.UserApiKey.provider == provider
+    ).first()
+
+def create_user_api_key(db: Session, api_key: schemas.ApiKeyCreate, user_id: int):
+    """创建用户API密钥"""
+    import hashlib
+    
+    # 创建密钥预览（显示前4位和后4位）
+    key = api_key.key
+    if len(key) > 8:
+        key_preview = f"{key[:4]}...{key[-4:]}"
+    else:
+        key_preview = key
+    
+    # 哈希密钥用于安全存储
+    key_hash = hashlib.sha256(key.encode()).hexdigest()
+    
+    db_api_key = models.UserApiKey(
+        user_id=user_id,
+        provider=api_key.provider,
+        key_hash=key_hash,
+        key_preview=key_preview,
+        status=api_key.status
+    )
+    db.add(db_api_key)
+    db.commit()
+    db.refresh(db_api_key)
+    return db_api_key
+
+def update_user_api_key(db: Session, api_key_id: int, api_key_update: schemas.ApiKeyUpdate, user_id: int):
+    """更新用户API密钥"""
+    db_api_key = db.query(models.UserApiKey).filter(
+        models.UserApiKey.id == api_key_id,
+        models.UserApiKey.user_id == user_id
+    ).first()
+    
+    if db_api_key:
+        update_data = api_key_update.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_api_key, key, value)
+        
+        db.commit()
+        db.refresh(db_api_key)
+    
+    return db_api_key
+
+def delete_user_api_key(db: Session, api_key_id: int, user_id: int):
+    """删除用户API密钥"""
+    db_api_key = db.query(models.UserApiKey).filter(
+        models.UserApiKey.id == api_key_id,
+        models.UserApiKey.user_id == user_id
+    ).first()
+    
+    if db_api_key:
+        db.delete(db_api_key)
+        db.commit()
+        return True
+    
+    return False
+
+# 用户设置相关CRUD操作
+def get_user_settings(db: Session, user_id: int):
+    """获取用户设置"""
+    return db.query(models.UserSettings).filter(models.UserSettings.user_id == user_id).first()
+
+def create_user_settings(db: Session, settings: schemas.UserSettingsCreate, user_id: int):
+    """创建用户设置"""
+    db_settings = models.UserSettings(**settings.model_dump(), user_id=user_id)
+    db.add(db_settings)
+    db.commit()
+    db.refresh(db_settings)
+    return db_settings
+
+def update_user_notification_settings(db: Session, user_id: int, settings_json: str):
+    """更新用户通知设置"""
+    db_settings = get_user_settings(db, user_id)
+    
+    if db_settings:
+        db_settings.notification_settings = settings_json
+        db.commit()
+        db.refresh(db_settings)
+    else:
+        # 创建新的设置记录
+        db_settings = models.UserSettings(
+            user_id=user_id,
+            notification_settings=settings_json
+        )
+        db.add(db_settings)
+        db.commit()
+        db.refresh(db_settings)
+    
+    return db_settings 

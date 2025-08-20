@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from . import models, schemas, crud
 from .database import engine, SessionLocal
-from .routers import strategies, backtest, trading, ai_assistant, market_data, auth, users
+from .routers import strategies, backtest, trading, ai_assistant, market_data, auth, users, dashboard, portfolio, orders, user
 
 # 创建数据库表
 models.Base.metadata.create_all(bind=engine)
@@ -40,6 +40,12 @@ app.include_router(backtest.router, prefix="/api/backtest", tags=["回测"])
 app.include_router(trading.router, prefix="/api/trading", tags=["交易"])
 app.include_router(market_data.router, prefix="/api/market-data", tags=["市场数据"])
 app.include_router(ai_assistant.router, prefix="/api/ai-assistant", tags=["AI助手"])
+
+# 新增路由器
+app.include_router(dashboard.router, prefix="/api/dashboard", tags=["仪表盘"])
+app.include_router(portfolio.router, prefix="/api/portfolio", tags=["投资组合"])
+app.include_router(orders.router, prefix="/api/orders", tags=["订单"])
+app.include_router(user.router, prefix="/api/user", tags=["用户设置"])
 
 @app.get("/api/health")
 def health_check():

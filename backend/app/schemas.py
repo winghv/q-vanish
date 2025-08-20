@@ -253,4 +253,54 @@ class MarketDataFilter(BaseModel):
     symbol: str
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    limit: Optional[int] = 100 
+    limit: Optional[int] = 100
+
+# API密钥相关模式
+class ApiKeyBase(BaseModel):
+    provider: str
+    status: str = "active"
+
+class ApiKeyCreate(ApiKeyBase):
+    key: str
+
+class ApiKeyUpdate(BaseModel):
+    status: Optional[str] = None
+    last_used: Optional[datetime] = None
+
+class ApiKeyInDB(ApiKeyBase):
+    id: int
+    key_preview: str  # 只显示部分密钥
+    last_used: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    user_id: int
+
+    class Config:
+        from_attributes = True
+
+class ApiKey(ApiKeyInDB):
+    pass
+
+# 用户设置相关模式
+class UserSettingsBase(BaseModel):
+    notification_settings: Optional[str] = None  # JSON字符串
+    trading_preferences: Optional[str] = None  # JSON字符串
+
+class UserSettingsCreate(UserSettingsBase):
+    pass
+
+class UserSettingsUpdate(BaseModel):
+    notification_settings: Optional[str] = None
+    trading_preferences: Optional[str] = None
+
+class UserSettingsInDB(UserSettingsBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class UserSettings(UserSettingsInDB):
+    pass 

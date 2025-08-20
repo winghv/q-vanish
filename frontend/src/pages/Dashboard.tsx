@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -10,40 +10,46 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-
-// 模拟数据
-const performanceData = [
-  { date: '2023-01', value: 4000 },
-  { date: '2023-02', value: 4200 },
-  { date: '2023-03', value: 4100 },
-  { date: '2023-04', value: 4400 },
-  { date: '2023-05', value: 4600 },
-  { date: '2023-06', value: 4800 },
-  { date: '2023-07', value: 5000 },
-  { date: '2023-08', value: 5200 },
-  { date: '2023-09', value: 5400 },
-];
-
-const activeStrategies = [
-  { id: 1, name: '双均线策略', profit: '+8.2%', trades: 32, status: 'running' },
-  { id: 2, name: '趋势跟踪策略', profit: '+5.6%', trades: 18, status: 'running' },
-  { id: 3, name: '波动率突破', profit: '-2.3%', trades: 24, status: 'paused' },
-];
-
-const recentTrades = [
-  { id: 1, strategy: '双均线策略', symbol: 'AAPL', type: 'buy', price: '186.40', amount: '10', time: '2023-09-15 09:34' },
-  { id: 2, strategy: '趋势跟踪策略', symbol: 'TSLA', type: 'sell', price: '264.79', amount: '5', time: '2023-09-14 15:21' },
-  { id: 3, strategy: '波动率突破', symbol: 'NVDA', type: 'buy', price: '435.20', amount: '3', time: '2023-09-13 10:12' },
-];
-
-const notifications = [
-  { id: 1, message: '双均线策略触发买入信号: AAPL', time: '10分钟前' },
-  { id: 2, message: '趋势跟踪策略执行止损: TSLA', time: '2小时前' },
-  { id: 3, message: '波动率突破策略回测完成', time: '昨天' },
-];
+import {
+  getDashboardPerformance,
+  getActiveStrategies,
+  getRecentTrades,
+  getNotifications
+} from '../services/api';
 
 const Dashboard: React.FC = () => {
   const [period, setPeriod] = useState<'1w'|'1m'|'3m'|'6m'|'1y'>('3m');
+  const [performanceData, setPerformanceData] = useState<{date: string, value: number}[]>([]);
+  const [activeStrategies, setActiveStrategies] = useState<any[]>([]);
+  const [recentTrades, setRecentTrades] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [perf, strategies, trades, notifs] = await Promise.all([
+          getDashboardPerformance(),
+          getActiveStrategies(),
+          getRecentTrades(),
+          getNotifications()
+        ]);
+        setPerformanceData(perf);
+        setActiveStrategies(strategies);
+        setRecentTrades(trades);
+        setNotifications(notifs);
+      } catch (err) {
+        window.showNotification?.('获取仪表盘数据失败', 'error');
+      }
+      setIsLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  if (isLoading) {
+    return <div className="p-6 text-gray-400">加载中...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -55,7 +61,6 @@ const Dashboard: React.FC = () => {
           <button className="btn btn-secondary">导出数据</button>
         </div>
       </div>
-
       {/* Portfolio Performance */}
       <div className="card">
         <div className="flex items-center justify-between mb-6">
@@ -76,7 +81,6 @@ const Dashboard: React.FC = () => {
             ))}
           </div>
         </div>
-
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
@@ -102,7 +106,6 @@ const Dashboard: React.FC = () => {
           </ResponsiveContainer>
         </div>
       </div>
-
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Active Strategies */}
         <div className="card">
@@ -122,7 +125,7 @@ const Dashboard: React.FC = () => {
                   <tr key={strategy.id} className="hover:bg-secondary-50">
                     <td className="py-4 text-sm font-medium text-secondary-900">{strategy.name}</td>
                     <td className={`py-4 text-right text-sm ${
-                      strategy.profit.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                      String(strategy.profit).startsWith('+') ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {strategy.profit}
                     </td>
@@ -142,7 +145,6 @@ const Dashboard: React.FC = () => {
             </table>
           </div>
         </div>
-
         {/* Recent Notifications */}
         <div className="card">
           <h2 className="mb-4 text-lg font-medium">最近通知</h2>
@@ -158,7 +160,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Recent Trades */}
       <div className="card">
         <h2 className="mb-4 text-lg font-medium">最近交易</h2>

@@ -162,4 +162,33 @@ class MarketData(Base):
         table_name = "market_data"
         indexes = [
             ("symbol", "date", "unique"),
-        ] 
+        ]
+
+class UserApiKey(Base):
+    __tablename__ = "user_api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    provider = Column(String, index=True)  # openai, alpaca, binance, etc.
+    key_hash = Column(String)  # 加密存储的密钥
+    key_preview = Column(String)  # 用于显示的密钥预览 (如: sk-...abc123)
+    status = Column(String, default="active")  # active, inactive
+    last_used = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 关系
+    user = relationship("User", backref="api_keys")
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    notification_settings = Column(JSON)  # 存储通知设置
+    trading_preferences = Column(JSON)  # 存储交易偏好设置
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 关系
+    user = relationship("User", backref="settings") 
