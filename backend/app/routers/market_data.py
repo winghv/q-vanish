@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from .. import crud, models, schemas
 from ..database import get_db
 from .auth import get_current_active_user
+from ..services.market_data import get_market_service, MarketDataService
 
 router = APIRouter()
 
@@ -182,4 +183,138 @@ def fetch_market_data(symbol: str, start_date: datetime, end_date: datetime):
     if data.empty:
         raise ValueError(f"无法获取股票数据: {symbol}")
     
-    return data 
+    return data
+
+# 新增：使用市场数据服务获取实时价格
+@router.get("/realtime-price/{symbol}")
+async def get_realtime_price(
+    symbol: str,
+    current_user: models.User = Depends(get_current_active_user),
+    market_service: MarketDataService = Depends(get_market_service)
+):
+    """获取单只股票的实时价格"""
+    try:
+        price = await market_service.get_real_time_price(symbol.upper())
+        if price is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"无法获取股票 {symbol} 的实时价格"
+            )
+        
+        return {
+            "symbol": symbol.upper(),
+            "price": round(price, 2),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取实时价格失败: {str(e)}"
+        )
+
+# 新增：批量获取实时价格
+@router.post("/realtime-prices")
+async def get_realtime_prices(
+    symbols: List[str],
+    current_user: models.User = Depends(get_current_active_user),
+    market_service: MarketDataService = Depends(get_market_service)
+):
+    """批量获取多只股票的实时价格"""
+    try:
+        # 将所有符号转换为大写
+        symbols = [s.upper() for s in symbols]
+        
+        prices = await market_service.get_multiple_prices(symbols)
+        
+        result = {
+            "prices": {
+                symbol: {
+                    "price": round(price, 2),
+                    "timestamp": datetime.now().isoformat()
+                }
+                for symbol, price in prices.items()
+            },
+            "requested": len(symbols),
+            "found": len(prices)
+        }
+        
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"批量获取价格失败: {str(e)}"
+        )
+
+# 新增：更新投资组合价格
+@router.post("/update-portfolio-prices/{portfolio_id}")
+async def update_portfolio_prices(
+    portfolio_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    market_service: MarketDataService = Depends(get_market_service)
+):
+    """更新指定投资组合的所有股票价格"""
+    try:
+        # 检查投资组合是否存在且用户有权限
+        portfolio = crud.get_portfolio(db, portfolio_id)
+        if not portfolio:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="投资组合不存在"
+            )
+        
+        if portfolio.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="没有权限访问此投资组合"
+            )
+        
+        # 添加后台任务更新价格
+        background_tasks.add_task(
+            market_service.update_portfolio_prices,
+            db, portfolio_id
+        )
+        
+        return {"message": f"投资组合 {portfolio_id} 价格更新任务已启动"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"更新投资组合价格失败: {str(e)}"
+        )
+
+# 新增：获取支持的股票列表
+@router.get("/supported-symbols")
+async def get_supported_symbols(
+    current_user: models.User = Depends(get_current_active_user),
+    market_service: MarketDataService = Depends(get_market_service)
+):
+    """获取支持的股票代码列表"""
+    return {
+        "symbols": market_service.get_supported_symbols(),
+        "count": len(market_service.get_supported_symbols())
+    }
+
+# 新增：验证股票代码
+@router.get("/validate-symbol/{symbol}")
+async def validate_symbol(
+    symbol: str,
+    current_user: models.User = Depends(get_current_active_user),
+    market_service: MarketDataService = Depends(get_market_service)
+):
+    """验证股票代码是否有效"""
+    try:
+        is_valid = await market_service.validate_symbol(symbol.upper())
+        return {
+            "symbol": symbol.upper(),
+            "is_valid": is_valid
+        }
+    except Exception as e:
+        return {
+            "symbol": symbol.upper(),
+            "is_valid": False,
+            "error": str(e)
+        } 

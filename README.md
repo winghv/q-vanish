@@ -11,6 +11,8 @@
 - 个性化风险控制
 - 历史交易记录和绩效分析
 
+![img](./resource/img/1.png)
+
 ## 技术栈
 
 - 前端：React, TailwindCSS
@@ -30,7 +32,7 @@
 
 1. 克隆项目
 ```
-git clone https://github.com/yourusername/q-vanish.git
+git clone https://github.com/winghv/q-vanish.git
 cd q-vanish
 ```
 
@@ -55,6 +57,11 @@ npm run dev
 
 前端将在 http://localhost:3000 运行
 后端API将在 http://localhost:8000 运行
+
+登陆账户
+用户名: demo_user   密码: demo123
+用户名: trader1     密码: trader123
+用户名: investor    密码: invest123
 
 ## 项目结构
 
