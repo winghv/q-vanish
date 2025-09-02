@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
@@ -7,6 +7,8 @@ import random
 from .. import crud, models, schemas
 from ..database import get_db
 from .auth import get_current_active_user
+from ..services.market_data import get_market_service, MarketDataService
+from ..services.cache import get_cache_service, CacheService
 
 router = APIRouter()
 
@@ -88,45 +90,56 @@ async def get_assets(
 @router.get("/performance")
 async def get_performance(
     current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    cache_service: CacheService = Depends(get_cache_service)
 ) -> Dict[str, Any]:
     """获取投资组合表现"""
+    # 先尝试从缓存获取
+    cached_performance = await cache_service.get_portfolio_data(current_user.id)
+    if cached_performance:
+        return cached_performance
+    
     portfolios = crud.get_user_portfolios(db, user_id=current_user.id)
     
     if not portfolios:
-        return _generate_mock_performance()
+        performance_data = _generate_mock_performance()
+    else:
+        # 计算总资产
+        total_balance = sum(p.total_value + p.cash_balance for p in portfolios)
+        
+        # 模拟各种收益率
+        day_change = random.uniform(-3.0, 3.0)
+        week_change = random.uniform(-8.0, 8.0)
+        month_change = random.uniform(-15.0, 15.0)
+        year_change = random.uniform(-30.0, 40.0)
+        total_return = random.uniform(-20.0, 60.0)
+        
+        # 生成历史净值数据
+        history = []
+        base_date = datetime.now() - timedelta(days=30)
+        for i in range(30):
+            date = base_date + timedelta(days=i)
+            # 基于总资产计算历史净值
+            value = total_balance * (1 + random.uniform(-0.03, 0.03))
+            history.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "value": round(value, 2)
+            })
+        
+        performance_data = {
+            "balance": round(total_balance, 2),
+            "day_change": round(day_change, 2),
+            "week_change": round(week_change, 2),
+            "month_change": round(month_change, 2),
+            "year_change": round(year_change, 2),
+            "total_return": round(total_return, 2),
+            "history": history
+        }
     
-    # 计算总资产
-    total_balance = sum(p.total_value + p.cash_balance for p in portfolios)
+    # 缓存结果（缓存5分钟）
+    await cache_service.set_portfolio_data(current_user.id, performance_data, 300)
     
-    # 模拟各种收益率
-    day_change = random.uniform(-3.0, 3.0)
-    week_change = random.uniform(-8.0, 8.0)
-    month_change = random.uniform(-15.0, 15.0)
-    year_change = random.uniform(-30.0, 40.0)
-    total_return = random.uniform(-20.0, 60.0)
-    
-    # 生成历史净值数据
-    history = []
-    base_date = datetime.now() - timedelta(days=30)
-    for i in range(30):
-        date = base_date + timedelta(days=i)
-        # 基于总资产计算历史净值
-        value = total_balance * (1 + random.uniform(-0.03, 0.03))
-        history.append({
-            "date": date.strftime("%Y-%m-%d"),
-            "value": round(value, 2)
-        })
-    
-    return {
-        "balance": round(total_balance, 2),
-        "day_change": round(day_change, 2),
-        "week_change": round(week_change, 2),
-        "month_change": round(month_change, 2),
-        "year_change": round(year_change, 2),
-        "total_return": round(total_return, 2),
-        "history": history
-    }
+    return performance_data
 
 def _generate_mock_assets() -> List[Dict[str, Any]]:
     """生成模拟资产数据"""
@@ -216,3 +229,91 @@ def _get_stock_name(symbol: str) -> str:
         "NFLX": "Netflix公司"
     }
     return stock_names.get(symbol, f"{symbol} 公司")
+
+# 新增：实时更新投资组合价格
+@router.post("/refresh-prices")
+async def refresh_portfolio_prices(
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    market_service: MarketDataService = Depends(get_market_service)
+):
+    """刷新用户所有投资组合的价格"""
+    try:
+        portfolios = crud.get_user_portfolios(db, user_id=current_user.id)
+        
+        if not portfolios:
+            return {"message": "没有找到投资组合"}
+        
+        # 为每个投资组合启动后台价格更新任务
+        for portfolio in portfolios:
+            background_tasks.add_task(
+                market_service.update_portfolio_prices,
+                db, portfolio.id
+            )
+        
+        return {
+            "message": f"已启动 {len(portfolios)} 个投资组合的价格更新任务",
+            "portfolio_count": len(portfolios)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"刷新价格失败: {str(e)}"
+        )
+
+# 新增：获取投资组合实时价格信息
+@router.get("/positions-realtime")
+async def get_positions_realtime(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    market_service: MarketDataService = Depends(get_market_service)
+):
+    """获取包含实时价格的投资组合持仓"""
+    try:
+        portfolios = crud.get_user_portfolios(db, user_id=current_user.id)
+        
+        if not portfolios:
+            return []
+        
+        all_positions = []
+        all_symbols = set()
+        
+        # 收集所有股票代码
+        for portfolio in portfolios:
+            assets = crud.get_portfolio_assets(db, portfolio_id=portfolio.id)
+            for asset in assets:
+                all_symbols.add(asset.symbol)
+        
+        # 批量获取实时价格
+        real_prices = await market_service.get_multiple_prices(list(all_symbols))
+        
+        # 构建持仓数据
+        for portfolio in portfolios:
+            assets = crud.get_portfolio_assets(db, portfolio_id=portfolio.id)
+            
+            for asset in assets:
+                current_price = real_prices.get(asset.symbol, asset.current_price)
+                value = asset.quantity * current_price
+                profit_loss = value - (asset.quantity * asset.average_price)
+                profit_loss_percent = (profit_loss / (asset.quantity * asset.average_price)) * 100 if asset.average_price > 0 else 0
+                
+                all_positions.append({
+                    "symbol": asset.symbol,
+                    "quantity": asset.quantity,
+                    "avg_cost": asset.average_price,
+                    "current_price": round(current_price, 2),
+                    "value": round(value, 2),
+                    "profit_loss": round(profit_loss, 2),
+                    "profit_loss_percent": round(profit_loss_percent, 2),
+                    "last_updated": datetime.now().isoformat()
+                })
+        
+        return all_positions
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"获取实时持仓失败: {str(e)}"
+        )

@@ -1,12 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from jose import JWTError, jwt
 from typing import Optional
 
-from .. import crud, models, schemas
+from .. import crud, models, schemas, config
 from ..database import get_db
+from ..utils.security import (
+    is_account_locked, increment_failed_login, reset_failed_login, 
+    update_login_info, SecurityException
+)
 
 router = APIRouter()
 
@@ -48,18 +52,50 @@ async def get_current_active_user(
 # 登录获取token
 @router.post("/token", response_model=schemas.Token)
 async def login_for_access_token(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    user = crud.authenticate_user(db, form_data.username, form_data.password)
+    # 首先获取用户（不验证密码）
+    user = crud.get_user_by_username(db, form_data.username)
+    
     if not user:
+        # 为了防止用户枚举，总是返回相同的错误
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码不正确",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    access_token_expires = timedelta(minutes=crud.ACCESS_TOKEN_EXPIRE_MINUTES)
+    # 检查账户是否被锁定
+    if is_account_locked(user):
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail=f"账户已被锁定，请在 {config.LOGIN_ATTEMPT_TIMEOUT // 60} 分钟后重试",
+        )
+    
+    # 验证密码
+    if not crud.verify_password(form_data.password, user.hashed_password):
+        # 增加失败次数
+        increment_failed_login(db, user)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="用户名或密码不正确",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 检查用户是否激活
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="账户已被停用",
+        )
+    
+    # 登录成功，重置失败次数并更新登录信息
+    reset_failed_login(db, user)
+    update_login_info(db, user, request)
+    
+    access_token_expires = timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = crud.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )

@@ -26,6 +26,11 @@ class User(Base):
     hashed_password = Column(String)
     role = Column(String, default=UserRole.USER)
     is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)  # 邮箱验证状态
+    failed_login_attempts = Column(Integer, default=0)  # 失败登录次数
+    locked_until = Column(DateTime, nullable=True)  # 账户锁定到期时间
+    last_login = Column(DateTime, nullable=True)  # 最后登录时间
+    last_login_ip = Column(String, nullable=True)  # 最后登录IP
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

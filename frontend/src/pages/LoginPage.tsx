@@ -19,7 +19,7 @@ const LoginPage: React.FC = () => {
     console.log('Attempting login with:', { username });
 
     try {
-      const response = await fetch('http://localhost:8001/api/auth/token', {
+      const response = await fetch('/api/auth/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
