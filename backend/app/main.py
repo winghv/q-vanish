@@ -1,10 +1,14 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from . import models, schemas, crud
 from .database import engine, SessionLocal
-from .routers import strategies, backtest, trading, ai_assistant, market_data, auth, users, dashboard, portfolio, orders, user, cache
+from .routers import strategies, backtest, trading, ai_assistant, market_data, auth, users, dashboard, portfolio, orders, user, cache, advanced_orders, position_analytics, broker_management, risk_management, position_sizing
+from .utils.rate_limit import limiter, custom_rate_limit_exceeded_handler
 
 # 创建数据库表
 models.Base.metadata.create_all(bind=engine)
@@ -14,6 +18,10 @@ app = FastAPI(
     description="量化交易平台API",
     version="0.1.0",
 )
+
+# 添加速率限制器到应用
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, custom_rate_limit_exceeded_handler)
 
 # 添加CORS中间件
 app.add_middleware(
@@ -45,8 +53,13 @@ app.include_router(ai_assistant.router, prefix="/api/ai-assistant", tags=["AI助
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["仪表盘"])
 app.include_router(portfolio.router, prefix="/api/portfolio", tags=["投资组合"])
 app.include_router(orders.router, prefix="/api/orders", tags=["订单"])
+app.include_router(advanced_orders.router, prefix="/api/advanced-orders", tags=["高级订单"])
+app.include_router(position_analytics.router, prefix="/api/analytics", tags=["持仓分析"])
 app.include_router(user.router, prefix="/api/user", tags=["用户设置"])
 app.include_router(cache.router, prefix="/api/cache", tags=["缓存管理"])
+app.include_router(broker_management.router, prefix="/api/brokers", tags=["券商管理"])
+app.include_router(risk_management.router, prefix="/api/risk", tags=["风险管理"])
+app.include_router(position_sizing.router, prefix="/api/position-sizing", tags=["持仓大小"])
 
 @app.get("/api/health")
 def health_check():

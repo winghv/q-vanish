@@ -9,6 +9,7 @@ from .. import crud, models, schemas
 from ..database import get_db
 from .auth import get_current_active_user
 from ..services.market_data import get_market_service, MarketDataService
+from ..utils.rate_limit import market_data_rate_limit
 
 router = APIRouter()
 
@@ -68,7 +69,7 @@ async def get_historical_data(
     return market_data
 
 # 获取多个股票的最新价格
-@router.get("/prices")
+@router.get("/prices", dependencies=[Depends(market_data_rate_limit)])
 async def get_latest_prices(
     symbols: str,
     current_user: models.User = Depends(get_current_active_user)
