@@ -129,7 +129,7 @@ All API types and functions are centralized in `frontend/src/services/api.ts` wi
 
 ### 📋 当前状态
 - ✅ **阶段1完成**: 核心后端API实现 (100%)
-- 🔄 **阶段2进行中**: 认证系统完善和市场数据集成
+- 🔄 **阶段2完成**: 认证系统完善和市场数据集成(100%)
 - ⏳ **后续阶段**: 待完成
 
 ### 🎯 完整开发路线图
@@ -144,14 +144,14 @@ All API types and functions are centralized in `frontend/src/services/api.ts` wi
 
 **成果**: 前端可显示真实数据，基础功能完全可用
 
-#### **阶段2: 认证系统完善和市场数据集成** 🔄 进行中
+#### **阶段2: 认证系统完善和市场数据集成** ✅ 已完成
 **目标**: 提升系统安全性和数据真实性
-- 🔄 完善JWT认证安全机制
-- 🔄 集成Yahoo Finance等外部数据源
-- 🔄 实现实时价格数据更新
-- 🔄 建立市场数据缓存系统
-- ⏳ 添加用户权限管理
-- ⏳ 实现API请求频率限制
+- ✅ 完善JWT认证安全机制 (账户锁定、角色权限)
+- ✅ 集成Yahoo Finance等外部数据源 (yfinance API完整集成)
+- ✅ 实现实时价格数据更新 (MarketDataService)
+- ✅ 建立市场数据缓存系统 (Redis + 内存缓存fallback)
+- ✅ 添加用户权限管理 (admin/user角色控制)
+- ✅ 实现API请求频率限制 (slowapi差异化限制)
 
 #### **阶段3: 交易系统完善** ⏳ 计划中
 **目标**: 构建完整的交易引擎

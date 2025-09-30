@@ -118,19 +118,45 @@ class OrderType(str, Enum):
     BUY = "buy"
     SELL = "sell"
 
+class AdvancedOrderType(str, Enum):
+    MARKET = "MARKET"
+    LIMIT = "LIMIT" 
+    STOP_LOSS = "STOP_LOSS"
+    TAKE_PROFIT = "TAKE_PROFIT"
+    STOP_LIMIT = "STOP_LIMIT"
+    BRACKET = "BRACKET"
+
+class TimeInForce(str, Enum):
+    DAY = "DAY"    # 当日有效
+    GTC = "GTC"    # 取消前有效
+    IOC = "IOC"    # 立即成交或取消
+    FOK = "FOK"    # 全部成交或取消
+
 class OrderStatus(str, Enum):
     PENDING = "pending"
     EXECUTED = "executed"
     CANCELED = "canceled"
     FAILED = "failed"
+    PARTIAL_FILLED = "partial_filled"
 
 class TradeBase(BaseModel):
     symbol: str
     order_type: OrderType
-    price: float
+    price: Optional[float] = None
     quantity: float
     strategy_id: Optional[int] = None
     portfolio_id: Optional[int] = None
+
+class AdvancedOrderCreate(BaseModel):
+    symbol: str
+    order_type: AdvancedOrderType
+    quantity: float  # 正数买入，负数卖出
+    price: Optional[float] = None  # 限价单价格
+    stop_price: Optional[float] = None  # 止损价格
+    take_profit_price: Optional[float] = None  # 止盈价格
+    time_in_force: TimeInForce = TimeInForce.DAY
+    strategy_id: Optional[int] = None
+    notes: Optional[str] = None
 
 class TradeCreate(TradeBase):
     pass

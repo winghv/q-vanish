@@ -7,6 +7,7 @@ from datetime import datetime
 from .. import crud, models, schemas
 from ..database import get_db
 from .auth import get_current_active_user
+from ..utils.rate_limit import trading_rate_limit
 
 router = APIRouter()
 
