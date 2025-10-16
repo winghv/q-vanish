@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 
 from . import models, schemas, crud
 from .database import engine, SessionLocal
-from .routers import strategies, backtest, trading, ai_assistant, market_data, auth, users, dashboard, portfolio, orders, user, cache, advanced_orders, position_analytics, broker_management, risk_management, position_sizing
+from .routers import strategies, backtest, trading, ai_assistant, market_data, auth, users, dashboard, portfolio, orders, user, cache, advanced_orders, position_analytics, broker_management, risk_management, position_sizing, strategy_system
 from .utils.rate_limit import limiter, custom_rate_limit_exceeded_handler
 
 # 创建数据库表
@@ -60,6 +60,7 @@ app.include_router(cache.router, prefix="/api/cache", tags=["缓存管理"])
 app.include_router(broker_management.router, prefix="/api/brokers", tags=["券商管理"])
 app.include_router(risk_management.router, prefix="/api/risk", tags=["风险管理"])
 app.include_router(position_sizing.router, prefix="/api/position-sizing", tags=["持仓大小"])
+app.include_router(strategy_system.router, tags=["策略系统"])
 
 @app.get("/api/health")
 def health_check():
