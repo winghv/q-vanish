@@ -84,6 +84,25 @@ class Backtest(Base):
     strategy = relationship("Strategy", back_populates="backtests")
     user = relationship("User", back_populates="backtests")
 
+class BacktestResult(Base):
+    """回测结果模型"""
+    __tablename__ = "backtest_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    strategy_id = Column(Integer, ForeignKey("strategies.id"), index=True)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    initial_capital = Column(Float)
+    final_capital = Column(Float)
+    total_return = Column(Float)  # 总回报率
+    sharpe_ratio = Column(Float, nullable=True)
+    max_drawdown = Column(Float)
+    win_rate = Column(Float)
+    total_trades = Column(Integer, default=0)
+    metrics = Column(JSON, nullable=True)  # 其他绩效指标
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class Trade(Base):
     __tablename__ = "trades"
 
