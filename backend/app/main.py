@@ -7,7 +7,7 @@ from slowapi.errors import RateLimitExceeded
 
 from . import models, schemas, crud
 from .database import engine, SessionLocal
-from .routers import strategies, backtest, trading, ai_assistant, market_data, auth, users, dashboard, portfolio, orders, user, cache, advanced_orders, position_analytics, broker_management, risk_management, position_sizing, strategy_system
+from .routers import strategies, backtest, trading, ai_assistant, ai_assistant_new, market_data, auth, users, dashboard, portfolio, orders, user, cache, advanced_orders, position_analytics, broker_management, risk_management, position_sizing, strategy_system
 from .utils.rate_limit import limiter, custom_rate_limit_exceeded_handler
 
 # 创建数据库表
@@ -47,7 +47,10 @@ app.include_router(strategies.router, prefix="/api/strategies", tags=["策略"])
 app.include_router(backtest.router, prefix="/api/backtest", tags=["回测"])
 app.include_router(trading.router, prefix="/api/trading", tags=["交易"])
 app.include_router(market_data.router, prefix="/api/market-data", tags=["市场数据"])
-app.include_router(ai_assistant.router, prefix="/api/ai-assistant", tags=["AI助手"])
+# 使用新的AI助手路由（包含完整AI功能）
+app.include_router(ai_assistant_new.router, prefix="/api", tags=["AI助手增强版"])
+# 保留旧路由作为兼容
+app.include_router(ai_assistant.router, prefix="/api/ai-assistant-legacy", tags=["AI助手（旧版）"])
 
 # 新增路由器
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["仪表盘"])
