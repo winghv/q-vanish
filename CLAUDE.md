@@ -141,7 +141,8 @@ All API types and functions are centralized in `frontend/src/services/api.ts` wi
 - ✅ **阶段2完成**: 认证系统完善和市场数据集成 (100%)
 - ✅ **阶段3完成**: 交易系统完善 (100%)
 - ✅ **阶段4完成**: 策略系统增强 (100%)
-- ⏳ **后续阶段**: 阶段5-7待完成
+- ✅ **阶段5完成**: AI和机器学习集成 (100%)
+- ⏳ **后续阶段**: 阶段6-7待完成
 
 ### 🎯 完整开发路线图
 
@@ -187,14 +188,18 @@ All API types and functions are centralized in `frontend/src/services/api.ts` wi
 
 **成果**: 完整的量化策略系统，从回测到实盘全流程支持
 
-#### **阶段5: AI和机器学习集成** ⏳ 计划中
+#### **阶段5: AI和机器学习集成** ✅ 已完成
 **目标**: 增强AI辅助交易功能
-- ⏳ 优化OpenAI API集成
-- ⏳ 实现智能投资建议
-- ⏳ 市场情绪分析
-- ⏳ 智能风险提醒
-- ⏳ 个性化策略推荐
-- ⏳ 自然语言交易查询
+- ✅ 升级OpenAI API到1.54.0（支持最新功能）
+- ✅ 实现AI服务管理器（统一管理、成本控制、缓存）
+- ✅ 实现智能投资建议（持仓分析、再平衡、资产推荐）
+- ✅ 市场情绪分析（整体市场、个股、行业板块）
+- ✅ 智能风险提醒（集中度、亏损、波动率风险）
+- ✅ 个性化策略推荐（基于交易历史、参数优化、策略对比）
+- ✅ 扩展数据库模型（5个AI相关表）
+- ✅ 完整AI助手API（14+个新端点）
+
+**成果**: 完整的AI辅助交易系统，覆盖投资建议、情绪分析、风险提醒、策略推荐全流程
 
 #### **阶段6: 用户体验和性能优化** ⏳ 计划中
 **目标**: 提升系统性能和用户体验  
@@ -222,15 +227,15 @@ All API types and functions are centralized in `frontend/src/services/api.ts` wi
 - 安全性加固
 
 ### 📈 项目进度跟踪
-- **总体进度**: 约60% (4/7阶段完成)
-- **已完成阶段**: 1-4 (核心API、认证系统、交易系统、策略系统)
-- **当前重点**: 阶段5 - AI和机器学习集成
+- **总体进度**: 约70% (5/7阶段完成)
+- **已完成阶段**: 1-5 (核心API、认证系统、交易系统、策略系统、AI集成)
+- **当前重点**: 阶段6 - 用户体验和性能优化
 
 ### 🎯 近期目标 (接下来2周)
-1. 优化OpenAI API集成
-2. 实现智能投资建议功能
-3. 市场情绪分析
-4. 个性化策略推荐
+1. 前端集成新AI API
+2. 实时数据推送(WebSocket)
+3. 前端性能优化
+4. 移动端响应式优化
 
 ### 📦 核心功能模块
 #### 已实现模块
@@ -241,9 +246,10 @@ All API types and functions are centralized in `frontend/src/services/api.ts` wi
 - ✅ **策略系统**: 回测引擎、技术指标、实盘执行、风险评估
 - ✅ **券商集成**: Paper Trading Broker、抽象broker接口
 - ✅ **分析工具**: 持仓分析、绩效指标、压力测试
+- ✅ **AI助手系统**: 投资建议、情绪分析、风险提醒、策略推荐（阶段5）
 
 #### 待实现模块
-- ⏳ **AI助手增强**: 智能建议、情绪分析、策略推荐
+- ⏳ **前端AI集成**: 连接后端AI API、构建AI组件
 - ⏳ **实时推送**: WebSocket、实时通知
 - ⏳ **部署运维**: Docker、监控、日志系统
 
@@ -363,3 +369,186 @@ POST /api/strategy-system/live/start
 }
 # 启动后策略将自动监控市场并执行交易
 ```
+
+## AI助手系统详解 (阶段5实现)
+
+### 核心服务模块
+
+#### 1. AIServiceManager (`ai_service_manager.py`)
+AI服务统一管理器
+- **OpenAI客户端管理**: 支持最新OpenAI API (1.54.0)
+- **请求限流**: 每分钟请求数和token数限制
+- **成本追踪**: 实时追踪API使用和成本
+- **缓存机制**: Redis缓存AI响应，减少重复请求
+- **重试机制**: 自动重试失败的API调用
+- **多模型支持**: gpt-4, gpt-4-turbo, gpt-4o, gpt-4o-mini, gpt-3.5-turbo
+
+#### 2. AIInvestmentAdvisor (`ai_investment_advisor.py`)
+智能投资建议服务
+- **投资组合分析**: 基于持仓、风险偏好的个性化建议
+- **再平衡建议**: 自动计算最优资产配置调整方案
+- **资产推荐**: 根据风险承受能力和投资目标推荐股票/ETF
+- **多因子分析**: 结合基本面、技术面、市场数据
+- **风险调整**: 提供风险调整后的配置建议
+
+#### 3. AISentimentAnalyzer (`ai_sentiment_analyzer.py`)
+市场情绪分析服务
+- **市场整体情绪**: 分析主要指数(SPY/QQQ/DIA)情绪
+- **个股情绪**: 技术指标+新闻分析的综合情绪评分(0-100)
+- **行业板块情绪**: 10个主要行业ETF的相对强弱分析
+- **情绪驱动因素**: 识别影响情绪的关键因素
+- **新闻集成**: 集成yfinance新闻API
+
+#### 4. AIRiskAlerter (`ai_risk_alerter.py`)
+智能风险提醒服务
+- **实时风险扫描**: 集中度、亏损、波动率风险检测
+- **风险等级评估**: LOW/MEDIUM/HIGH/CRITICAL四级分类
+- **AI风险分析**: 生成详细的风险评估报告
+- **持仓级风险**: 单个股票的风险评估和止损建议
+- **风险数据库**: 记录所有风险事件和处理历史
+
+#### 5. AIStrategyRecommender (`ai_strategy_recommender.py`)
+个性化策略推荐服务
+- **交易画像分析**: 基于历史交易的用户特征分析
+- **策略推荐**: 匹配用户风险偏好和经验的策略推荐
+- **参数优化**: AI辅助的策略参数调优建议
+- **策略对比**: 多策略性能和风险收益对比
+- **学习路径**: 为新策略提供学习建议
+
+### 数据库模型
+
+**新增5个AI相关表**:
+1. **AIAdviceHistory**: AI建议历史记录（所有建议类型）
+2. **SentimentAnalysisRecord**: 市场情绪分析记录
+3. **AIRiskAlert**: AI风险提醒记录
+4. **AIStrategyRecommendation**: 策略推荐记录
+5. **AIUsageStats**: AI使用统计（tokens、成本等）
+
+### API端点
+
+所有AI助手API通过 `/api/ai-assistant` 前缀访问：
+
+```
+POST   /chat                        # 基础聊天功能
+POST   /investment-advice           # 获取投资组合建议
+POST   /rebalancing-advice          # 获取再平衡建议
+POST   /asset-recommendations       # 获取资产推荐
+POST   /sentiment/market            # 分析市场整体情绪
+POST   /sentiment/symbol            # 分析单个股票情绪
+GET    /sentiment/sectors           # 获取行业板块情绪
+POST   /risk/scan                   # 扫描投资组合风险
+GET    /risk/alerts                 # 获取用户的风险提醒列表
+POST   /strategy/recommend          # 推荐交易策略
+POST   /strategy/optimize           # 优化策略参数
+POST   /strategy/compare            # 比较多个策略
+GET    /stats                       # 获取AI使用统计
+GET    /health                      # AI服务健康检查
+GET    /history                     # 获取AI建议历史
+```
+
+### 使用示例
+
+#### 获取投资组合建议
+```python
+POST /api/ai-assistant/investment-advice
+{
+  "portfolio_id": 1,
+  "focus_areas": ["rebalancing", "risk", "diversification"]
+}
+
+# 响应
+{
+  "success": true,
+  "advice": "# 投资组合分析\n\n## 1. 资产配置分析...",
+  "portfolio_summary": {
+    "total_value": 150000.00,
+    "cash_balance": 25000.00,
+    "positions_count": 8,
+    "symbols": ["AAPL", "MSFT", "GOOGL", ...]
+  }
+}
+```
+
+#### 分析市场情绪
+```python
+POST /api/ai-assistant/sentiment/market
+{
+  "symbols": ["SPY", "QQQ"],
+  "include_news": true
+}
+
+# 响应
+{
+  "success": true,
+  "sentiment_score": 65,  # 0-100，50为中性
+  "analysis": "# 市场情绪分析\n\n整体评分: 65分（偏乐观）...",
+  "market_data": {
+    "SPY": {"current_price": 450.12, "month_change_pct": 3.5, ...},
+    "QQQ": {"current_price": 380.45, "month_change_pct": 5.2, ...}
+  }
+}
+```
+
+#### 扫描风险
+```python
+POST /api/ai-assistant/risk/scan
+{
+  "portfolio_id": 1
+}
+
+# 响应
+{
+  "success": true,
+  "risk_level": "medium",
+  "alerts": [
+    {
+      "type": "concentration_risk",
+      "severity": "high",
+      "symbol": "AAPL",
+      "message": "AAPL 占比过高 (35.2%)，建议分散投资"
+    }
+  ],
+  "ai_analysis": "# 风险评估\n\n当前主要风险..."
+}
+```
+
+#### 策略推荐
+```python
+POST /api/ai-assistant/strategy/recommend
+{
+  "portfolio_id": 1,
+  "market_condition": "trending"
+}
+
+# 响应
+{
+  "success": true,
+  "recommendations": "# 策略推荐\n\n基于您的交易历史...",
+  "trading_profile": {
+    "experience_level": "intermediate",
+    "risk_tolerance": "moderate",
+    "win_rate": 58.5
+  },
+  "recommended_templates": [...]
+}
+```
+
+### 成本控制
+
+- **缓存策略**: 相同请求5分钟内使用缓存
+- **模型选择**: 默认使用gpt-4o-mini（成本低廉）
+- **Token限制**: 每次请求最大2000 tokens
+- **使用追踪**: 实时记录每个用户的使用情况和成本
+
+### 下一步工作
+
+**前端集成**（待完成）:
+1. 修改`frontend/src/pages/AIAssistant.tsx`连接新API
+2. 创建AI组件：投资建议卡片、情绪仪表板、风险提醒中心、策略推荐列表
+3. 实现流式响应UI
+4. 添加用户反馈机制（建议是否有帮助）
+
+**测试**（待完成）:
+1. 单元测试各AI服务
+2. Playwright端到端测试AI功能
+3. 成本和性能测试

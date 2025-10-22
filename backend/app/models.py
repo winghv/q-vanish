@@ -398,3 +398,109 @@ class PerformanceMetrics(Base):
     # 关系
     user = relationship("User", backref="performance_metrics")
     portfolio = relationship("Portfolio", backref="performance_metrics")
+
+
+# AI Assistant Models
+
+class AIAdviceType(str, enum.Enum):
+    """AI建议类型"""
+    INVESTMENT_ADVICE = "investment_advice"
+    SENTIMENT_ANALYSIS = "sentiment_analysis"
+    RISK_ALERT = "risk_alert"
+    STRATEGY_RECOMMENDATION = "strategy_recommendation"
+    PORTFOLIO_REBALANCING = "portfolio_rebalancing"
+    ASSET_RECOMMENDATION = "asset_recommendation"
+
+
+class AIAdviceHistory(Base):
+    """AI建议历史记录"""
+    __tablename__ = "ai_advice_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    portfolio_id = Column(Integer, ForeignKey("portfolios.id"), nullable=True)
+    advice_type = Column(Enum(AIAdviceType), index=True)
+    request_params = Column(JSON, nullable=True)  # 请求参数
+    advice_content = Column(Text)  # AI生成的建议内容
+    extra_metadata = Column(JSON, nullable=True)  # 额外元数据（如情绪评分、风险等级等）
+    was_helpful = Column(Boolean, nullable=True)  # 用户反馈：建议是否有帮助
+    user_action_taken = Column(String, nullable=True)  # 用户采取的行动
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # 关系
+    user = relationship("User", backref="ai_advice_history")
+
+
+class SentimentAnalysisRecord(Base):
+    """市场情绪分析记录"""
+    __tablename__ = "sentiment_analysis_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    analysis_type = Column(String, index=True)  # market, symbol, sector
+    target = Column(String, nullable=True, index=True)  # 分析目标（股票代码、板块名称等）
+    sentiment_score = Column(Integer, nullable=True)  # 情绪评分 0-100
+    sentiment_level = Column(String)  # 情绪等级：bearish, neutral, bullish
+    analysis_content = Column(Text)  # 分析内容
+    market_data_snapshot = Column(JSON, nullable=True)  # 市场数据快照
+    news_summary = Column(Text, nullable=True)  # 新闻摘要
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    expires_at = Column(DateTime, nullable=True)  # 分析过期时间
+
+
+class AIRiskAlert(Base):
+    """AI风险提醒记录"""
+    __tablename__ = "ai_risk_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    portfolio_id = Column(Integer, ForeignKey("portfolios.id"), nullable=True, index=True)
+    alert_type = Column(String, index=True)  # concentration, loss, volatility, etc.
+    severity = Column(String, index=True)  # low, medium, high, critical
+    symbol = Column(String, nullable=True, index=True)
+    alert_message = Column(Text)
+    ai_analysis = Column(Text, nullable=True)  # AI生成的详细分析
+    alert_data = Column(JSON, nullable=True)  # 告警相关数据
+    is_read = Column(Boolean, default=False)
+    is_resolved = Column(Boolean, default=False)
+    resolved_at = Column(DateTime, nullable=True)
+    resolution_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # 关系
+    user = relationship("User", backref="ai_risk_alerts")
+    portfolio = relationship("Portfolio", backref="ai_risk_alerts")
+
+
+class AIStrategyRecommendation(Base):
+    """AI策略推荐记录"""
+    __tablename__ = "ai_strategy_recommendations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    recommendation_content = Column(Text)  # 推荐内容
+    recommended_strategies = Column(JSON)  # 推荐的策略列表
+    user_trading_profile = Column(JSON, nullable=True)  # 用户交易画像快照
+    market_condition = Column(String, nullable=True)  # 市场条件
+    was_accepted = Column(Boolean, nullable=True)  # 用户是否接受推荐
+    applied_strategy_ids = Column(JSON, nullable=True)  # 用户应用的策略ID列表
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # 关系
+    user = relationship("User", backref="ai_strategy_recommendations")
+
+
+class AIUsageStats(Base):
+    """AI使用统计"""
+    __tablename__ = "ai_usage_stats"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    service_type = Column(String, index=True)  # chat, investment_advisor, sentiment, risk, strategy
+    request_count = Column(Integer, default=1)
+    total_tokens = Column(Integer, default=0)
+    total_cost = Column(Float, default=0.0)  # USD
+    date = Column(DateTime, index=True, default=datetime.utcnow)
+    extra_metadata = Column(JSON, nullable=True)  # 额外统计信息
+
+    # 关系
+    user = relationship("User", backref="ai_usage_stats")

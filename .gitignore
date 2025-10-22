@@ -52,3 +52,4 @@ yarn-error.log*
 
 .claude
 CLAUDE.md
+.playwright-mcp
